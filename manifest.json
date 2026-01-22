@@ -1,0 +1,15 @@
+{
+  "name": "RN Energy Water Motor",
+  "short_name": "RN Energy",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#0a7cff",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
