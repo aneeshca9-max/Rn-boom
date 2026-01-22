@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RN Energy - Water Motor</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Icon -->
+  <link rel="icon" href="icon-512.png">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div_attach class="container">
+    <h1>RN Energy – Water Motor</h1>
+
+    <select id="device">
+      <option value="A001">A001 - Home</option>
+      <option value="A002">A002</option>
+    </select>
+
+    <button class="on" onclick="motorOn()">MOTOR ON</button>
+    <button class="off" onclick="motorOff()">MOTOR OFF</button>
+
+    <p id="status">⏳ Connecting...</p>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
