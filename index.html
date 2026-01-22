@@ -1,35 +1,116 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>RN Energy - Water Motor</title>
-
+  <title>RN Energy – Water Motor</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json">
+  <!-- MQTT WebSocket Library -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
-  <!-- Icon -->
-  <link rel="icon" href="icon-512.png">
+  <style>
+    body {
+      background: #0b1220;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 30px;
+    }
 
-  <link rel="stylesheet" href="style.css">
+    h1 {
+      margin-bottom: 20px;
+      font-size: 28px;
+    }
+
+    select, button {
+      width: 240px;
+      padding: 14px;
+      font-size: 18px;
+      margin: 10px;
+      border-radius: 8px;
+      border: none;
+    }
+
+    select {
+      background: #555;
+      color: white;
+    }
+
+    .on {
+      background: #0a8f08;
+      color: white;
+    }
+
+    .off {
+      background: #b30000;
+      color: white;
+    }
+
+    #status {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+  </style>
 </head>
 
 <body>
-  <div_attach class="container">
-    <h1>RN Energy – Water Motor</h1>
 
-    <select id="device">
-      <option value="A001">A001 - Home</option>
-      <option value="A002">A002</option>
-    </select>
+  <h1>RN Energy – Water Motor</h1>
 
-    <button class="on" onclick="motorOn()">MOTOR ON</button>
-    <button class="off" onclick="motorOff()">MOTOR OFF</button>
+  <select id="device">
+    <option value="A001">A001 - Home</option>
+    <option value="A002">A002</option>
+    <option value="A003">A003</option>
+  </select>
 
-    <p id="status">⏳ Connecting...</p>
-  </div>
+  <br>
 
-  <script src="app.js"></script>
+  <button class="on" onclick="motorOn()">MOTOR ON</button><br>
+  <button class="off" onclick="motorOff()">MOTOR OFF</button>
+
+  <div id="status">⏳ Connecting...</div>
+
+  <script>
+    const brokerUrl =
+      "wss://ec91e389d1624d2fa990c2bcb883d331.s1.eu.hivemq.cloud:8884/mqtt";
+
+    const options = {
+      username: "aneesh_home",
+      password: "Kuttappan123",
+      clean: true,
+      connectTimeout: 5000,
+      reconnectPeriod: 2000
+    };
+
+    const client = mqtt.connect(brokerUrl, options);
+
+    client.on("connect", () => {
+      document.getElementById("status").innerText =
+        "✅ Connected to HiveMQ";
+    });
+
+    client.on("reconnect", () => {
+      document.getElementById("status").innerText =
+        "🔄 Reconnecting...";
+    });
+
+    client.on("error", (err) => {
+      document.getElementById("status").innerText =
+        "❌ Connection error";
+      console.error(err);
+    });
+
+    function motorOn() {
+      const id = document.getElementById("device").value;
+      client.publish(id + "/MOTOR", "ON");
+    }
+
+    function motorOff() {
+      const id = document.getElementById("device").value;
+      client.publish(id + "/MOTOR", "OFF");
+    }
+  </script>
+
 </body>
 </html>
