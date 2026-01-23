@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ml">
 <head>
   <meta charset="UTF-8">
   <title>RN Energy – Water Motor</title>
@@ -12,55 +12,64 @@
   <style>
     body { background: #0b1220; color: #ffffff; font-family: Arial, sans-serif; text-align: center; padding: 30px; }
     h1 { margin-bottom: 20px; font-size: 28px; }
-    select, button { width: 240px; padding: 14px; font-size: 18px; margin: 10px; border-radius: 8px; border: none; }
-    select { background: #555; color: white; }
-    .on { background: #0a8f08; color: white; }
-    .off { background: #b30000; color: white; }
-    #status { margin-top: 20px; font-size: 18px; }
+    select, button { width: 260px; padding: 14px; font-size: 18px; margin: 10px; border-radius: 8px; border: none; font-weight: bold; }
+    select { background: #333; color: white; border: 1px solid #555; }
+    
+    .on { background: #0a8f08; color: white; cursor: pointer; }
+    .off { background: #b30000; color: white; cursor: pointer; }
+    
+    #status-container { margin-top: 25px; padding: 15px; background: #1a2635; border-radius: 10px; }
+    #indicator { height: 15px; width: 15px; background-color: grey; border-radius: 50%; display: inline-block; margin-right: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+    #status { font-size: 18px; vertical-align: middle; }
+    #timer { font-size: 32px; margin-top: 15px; color: #ffcc00; font-family: 'Courier New', Courier, monospace; }
 
     /* Modal Styling */
     .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; }
-    .modal-content { background:#1a2635; margin:15% auto; padding:20px; width:85%; border-radius:10px; text-align: left; }
-    input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; box-sizing: border-box; }
-    .settings-btn { position: fixed; top: 15px; right: 15px; background: none; border: none; font-size: 24px; cursor: pointer; width: auto; padding: 0; }
+    .modal-content { background:#1a2635; margin:15% auto; padding:25px; width:85%; border-radius:15px; text-align: left; }
+    input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: 1px solid #444; background: #0b1220; color: white; box-sizing: border-box; }
+    .settings-btn { position: fixed; top: 15px; right: 15px; background: none; border: none; font-size: 28px; cursor: pointer; width: auto; padding: 0; z-index: 10; }
   </style>
 </head>
 
 <body>
 
   <button class="settings-btn" onclick="openSettings()">⚙️</button>
-  <h1>RN Energy – Water Motor</h1>
+  <h1>ആർഎൻ എനർജി</h1>
 
   <select id="device">
-    <option value="A001">A001 - Home</option>
-    <option value="A002">A002 - Garden</option>
-    <option value="A003">A003 - Tank 2</option>
+    <option value="A001">A001 - വീട്</option>
+    <option value="A002">A002 - ഗാർഡൻ</option>
   </select>
 
   <br>
-  <button class="on" onclick="motorOn()">MOTOR ON</button><br>
-  <button class="off" onclick="motorOff()">MOTOR OFF</button>
+  <button class="on" onclick="motorOn()">മോട്ടോർ ഓൺ</button><br>
+  <button class="off" onclick="motorOff()">മോട്ടോർ ഓഫ്</button>
 
-  <div id="status">⏳ Loading Settings...</div>
+  <div id="status-container">
+    <span id="indicator"></span>
+    <span id="status">⏳ കണക്ട് ചെയ്യുന്നു...</span>
+    <div id="timer">00:00:00</div>
+  </div>
 
   <div id="settingsModal" class="modal">
     <div class="modal-content">
-      <h2 style="margin-top:0">App Settings</h2>
+      <h2 style="margin-top:0">Settings</h2>
       <label>MQTT Username:</label>
       <input type="text" id="mqttUser" placeholder="aneesh_home">
       <label>MQTT Password:</label>
-      <input type="password" id="mqttPass" placeholder="Your Password">
+      <input type="password" id="mqttPass" placeholder="Password">
       
-      <button class="on" style="width:100%; margin: 10px 0;" onclick="saveSettings()">SAVE & CONNECT</button>
-      <button class="off" style="width:100%; margin: 0;" onclick="closeSettings()">CANCEL</button>
+      <button class="on" style="width:100%; margin: 15px 0 0 0;" onclick="saveSettings()">SAVE & CONNECT</button>
+      <button class="off" style="width:100%; margin: 10px 0 0 0;" onclick="closeSettings()">CANCEL</button>
     </div>
   </div>
 
   <script>
     let client;
+    let startTime;
+    let timerInterval;
     const brokerUrl = "wss://ec91e389d1624d2fa990c2bcb883d331.s1.eu.hivemq.cloud:8884/mqtt";
 
-    // ആപ്പ് ലോഡ് ചെയ്യുമ്പോൾ കണക്ട് ചെയ്യുക
     window.onload = function() {
         const savedUser = localStorage.getItem("mqtt_user");
         const savedPass = localStorage.getItem("mqtt_pass");
@@ -68,74 +77,82 @@
         if (savedUser && savedPass) {
             connectMQTT(savedUser, savedPass);
         } else {
-            document.getElementById("status").innerText = "⚠️ Please set Password in Settings";
+            document.getElementById("status").innerText = "⚠️ സെറ്റിംഗ്‌സ് നൽകുക";
             openSettings();
         }
     };
 
     function connectMQTT(user, pass) {
-        document.getElementById("status").innerText = "⏳ Connecting...";
-        
-        const options = {
-            username: user,
-            password: pass,
-            clean: true,
-            connectTimeout: 5000,
-            reconnectPeriod: 2000
-        };
-
+        const options = { username: user, password: pass, clean: true, connectTimeout: 5000, reconnectPeriod: 2000 };
         client = mqtt.connect(brokerUrl, options);
 
         client.on("connect", () => {
-            document.getElementById("status").innerText = "✅ Connected to HiveMQ";
+            document.getElementById("status").innerText = "✅ കണക്ട് ആയിട്ടുണ്ട്";
+            document.getElementById("indicator").style.backgroundColor = "blue";
+            const id = document.getElementById("device").value;
+            client.subscribe(id + "/STATUS");
         });
 
-        client.on("reconnect", () => {
-            document.getElementById("status").innerText = "🔄 Reconnecting...";
+        client.on("message", (topic, message) => {
+            const motorState = message.toString();
+            const statusText = document.getElementById("status");
+            const indicator = document.getElementById("indicator");
+
+            if (motorState === "RUNNING") {
+                statusText.innerText = "മോട്ടോർ പ്രവർത്തിക്കുന്നു";
+                indicator.style.backgroundColor = "#0a8f08";
+                if (!timerInterval) {
+                    startTime = new Date();
+                    timerInterval = setInterval(updateTimer, 1000);
+                }
+            } else if (motorState === "STOPPED") {
+                statusText.innerText = "മോട്ടോർ ഓഫ് ആണ്";
+                indicator.style.backgroundColor = "#b30000";
+                clearInterval(timerInterval);
+                timerInterval = null;
+                document.getElementById("timer").innerText = "00:00:00";
+            }
         });
 
-        client.on("error", (err) => {
-            document.getElementById("status").innerText = "❌ Auth Failed / Error";
-        });
+        client.on("error", () => { document.getElementById("status").innerText = "❌ കണക്ഷൻ പരാജയപ്പെട്ടു"; });
+    }
+
+    function updateTimer() {
+        const now = new Date();
+        const diff = new Date(now - startTime);
+        const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
+        const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+        const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+        document.getElementById("timer").innerText = `${h}:${m}:${s}`;
     }
 
     function motorOn() {
-        if(!client || !client.connected) return alert("Not connected!");
-        const id = document.getElementById("device").value;
-        client.publish(id + "/MOTOR", "ON");
+        if(!client || !client.connected) return alert("കണക്ഷൻ ഇല്ല!");
+        client.publish(document.getElementById("device").value + "/MOTOR", "ON");
     }
 
     function motorOff() {
-        if(!client || !client.connected) return alert("Not connected!");
-        const id = document.getElementById("device").value;
-        client.publish(id + "/MOTOR", "OFF");
+        if(!client || !client.connected) return alert("കണക്ഷൻ ഇല്ല!");
+        client.publish(document.getElementById("device").value + "/MOTOR", "OFF");
     }
 
-    // Modal Functions
     function openSettings() {
         document.getElementById("mqttUser").value = localStorage.getItem("mqtt_user") || "aneesh_home";
         document.getElementById("mqttPass").value = localStorage.getItem("mqtt_pass") || "";
         document.getElementById("settingsModal").style.display = "block";
     }
 
-    function closeSettings() {
-        document.getElementById("settingsModal").style.display = "none";
-    }
+    function closeSettings() { document.getElementById("settingsModal").style.display = "none"; }
 
     function saveSettings() {
         const user = document.getElementById("mqttUser").value;
         const pass = document.getElementById("mqttPass").value;
-
         if(user && pass) {
             localStorage.setItem("mqtt_user", user);
             localStorage.setItem("mqtt_pass", pass);
-            alert("Settings saved!");
             location.reload();
-        } else {
-            alert("Please fill all fields");
-        }
+        } else { alert("വിവരങ്ങൾ പൂർണ്ണമായി നൽകുക"); }
     }
   </script>
-
 </body>
 </html>
