@@ -1,158 +1,253 @@
 <!DOCTYPE html>
-<html lang="ml">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>RN Energy – Water Motor</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0b1220">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RN Energy Pro</title>
 
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
   <style>
-    body { background: #0b1220; color: #ffffff; font-family: Arial, sans-serif; text-align: center; padding: 30px; }
-    h1 { margin-bottom: 20px; font-size: 28px; }
-    select, button { width: 260px; padding: 14px; font-size: 18px; margin: 10px; border-radius: 8px; border: none; font-weight: bold; }
-    select { background: #333; color: white; border: 1px solid #555; }
-    
-    .on { background: #0a8f08; color: white; cursor: pointer; }
-    .off { background: #b30000; color: white; cursor: pointer; }
-    
-    #status-container { margin-top: 25px; padding: 15px; background: #1a2635; border-radius: 10px; }
-    #indicator { height: 15px; width: 15px; background-color: grey; border-radius: 50%; display: inline-block; margin-right: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
-    #status { font-size: 18px; vertical-align: middle; }
-    #timer { font-size: 32px; margin-top: 15px; color: #ffcc00; font-family: 'Courier New', Courier, monospace; }
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --green: #2ea043;
+      --red: #f85149;
+      --blue: #58a6ff;
+      --accent: #f2e000;
+      --text: #c9d1d9;
+      --gray: #8b949e;
+    }
 
-    /* Modal Styling */
-    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; }
-    .modal-content { background:#1a2635; margin:15% auto; padding:25px; width:85%; border-radius:15px; text-align: left; }
-    input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: 1px solid #444; background: #0b1220; color: white; box-sizing: border-box; }
-    .settings-btn { position: fixed; top: 15px; right: 15px; background: none; border: none; font-size: 28px; cursor: pointer; width: auto; padding: 0; z-index: 10; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 15px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container { width: 100%; max-width: 400px; }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    h3 { color: var(--accent); margin: 0; font-size: 22px; font-weight: bold; }
+
+    .settings-btn {
+      background: #21262d;
+      border: 1px solid var(--border);
+      color: #c9d1d9;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 15px;
+      border: 1px solid var(--border);
+    }
+
+    .row { display: flex; justify-content: space-between; }
+
+    .label-top { font-size: 11px; color: var(--gray); text-transform: uppercase; margin-bottom: 5px; }
+    .val-main { font-size: 28px; font-weight: 800; }
+
+    /* Tank Styles */
+    .tank-section { margin-top: 15px; }
+    .tank-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .tank-label { font-size: 12px; color: var(--gray); text-transform: uppercase; }
+    .tank-pct { font-size: 16px; font-weight: bold; }
+    
+    .tank-bar-bg {
+      height: 8px;
+      background: #21262d;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      overflow: hidden;
+    }
+    .tank-bar-fill { height: 100%; width: 0%; transition: width 0.5s ease-in-out; }
+
+    /* Control Styles */
+    #statusLabel {
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: var(--green);
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+
+    .btn-group { display: flex; gap: 15px; }
+    .btn-action {
+      flex: 1;
+      padding: 18px;
+      border-radius: 10px;
+      border: none;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+      color: white;
+      text-transform: uppercase;
+    }
+    .btn-on { background: #1a3d24; color: #2ea043; border: 1px solid #2ea04333; }
+    .btn-off { background: var(--red); }
+
+    .btn-reset {
+      width: 100%;
+      margin-top: 20px;
+      padding: 12px;
+      background: #161b22;
+      border: 1px dashed #484f58;
+      color: #f0f6fc;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
   </style>
 </head>
 
 <body>
+<div class="container">
+  <header>
+    <h3>RN ENERGY PRO</h3>
+    <button class="settings-btn" onclick="openSettings()">⚙️ SETUP</button>
+  </header>
 
-  <button class="settings-btn" onclick="openSettings()">⚙️</button>
-  <h1>ആർഎൻ എനർജി</h1>
-
-  <select id="device">
-    <option value="A001">A001 - വീട്</option>
-    <option value="A002">A002 - ഗാർഡൻ</option>
-  </select>
-
-  <br>
-  <button class="on" onclick="motorOn()">മോട്ടോർ ഓൺ</button><br>
-  <button class="off" onclick="motorOff()">മോട്ടോർ ഓഫ്</button>
-
-  <div id="status-container">
-    <span id="indicator"></span>
-    <span id="status">⏳ കണക്ട് ചെയ്യുന്നു...</span>
-    <div id="timer">00:00:00</div>
-  </div>
-
-  <div id="settingsModal" class="modal">
-    <div class="modal-content">
-      <h2 style="margin-top:0">Settings</h2>
-      <label>MQTT Username:</label>
-      <input type="text" id="mqttUser" placeholder="aneesh_home">
-      <label>MQTT Password:</label>
-      <input type="password" id="mqttPass" placeholder="Password">
-      
-      <button class="on" style="width:100%; margin: 15px 0 0 0;" onclick="saveSettings()">SAVE & CONNECT</button>
-      <button class="off" style="width:100%; margin: 10px 0 0 0;" onclick="closeSettings()">CANCEL</button>
+  <div class="card">
+    <div class="row">
+      <div style="flex: 1;">
+        <div class="label-top">VOLTAGE</div>
+        <div class="val-main" style="color:var(--green)" id="liveV">0V</div>
+      </div>
+      <div style="flex: 1; text-align: right;">
+        <div class="label-top">AMPERE</div>
+        <div class="val-main" style="color:var(--blue)" id="liveA">0.000A</div>
+      </div>
     </div>
   </div>
 
-  <script>
-    let client;
-    let startTime;
-    let timerInterval;
-    const brokerUrl = "wss://ec91e389d1624d2fa990c2bcb883d331.s1.eu.hivemq.cloud:8884/mqtt";
+  <div class="card">
+    <div class="tank-section">
+      <div class="tank-info">
+        <span class="tank-label">UPPER TANK</span>
+        <span class="tank-pct" style="color:var(--blue)" id="upPct">0%</span>
+      </div>
+      <div class="tank-bar-bg">
+        <div id="upBar" class="tank-bar-fill" style="background:var(--blue)"></div>
+      </div>
 
-    window.onload = function() {
-        const savedUser = localStorage.getItem("mqtt_user");
-        const savedPass = localStorage.getItem("mqtt_pass");
+      <div class="tank-info">
+        <span class="tank-label">LOWER TANK</span>
+        <span class="tank-pct" style="color:var(--accent)" id="loPct">0%</span>
+      </div>
+      <div class="tank-bar-bg">
+        <div id="loBar" class="tank-bar-fill" style="background:var(--accent)"></div>
+      </div>
+    </div>
+  </div>
 
-        if (savedUser && savedPass) {
-            connectMQTT(savedUser, savedPass);
+  <div class="card">
+    <div id="statusLabel">WAITING...</div>
+    <div class="btn-group">
+      <button class="btn-action btn-on" onclick="sendCmd('ON')">MOTOR ON</button>
+      <button class="btn-action btn-off" onclick="sendCmd('OFF')">MOTOR OFF</button>
+    </div>
+    <button class="btn-reset" onclick="resetCloud()">
+      ⚠️ RESET CLOUD DATA
+    </button>
+  </div>
+</div>
+
+<script>
+  const topicStatus = "A001/STATUS";
+  const topicControl = "A001/MOTOR";
+  let client;
+
+  function connectMQTT() {
+    const user = localStorage.getItem("mqtt_user");
+    const pass = localStorage.getItem("mqtt_pass");
+
+    if (!user || !pass) {
+      document.getElementById("statusLabel").innerText = "SETUP REQUIRED";
+      document.getElementById("statusLabel").style.color = "var(--accent)";
+      return;
+    }
+
+    client = mqtt.connect(
+      "wss://ec91e389d1624d2fa990c2bcb883d331.s1.eu.hivemq.cloud:8884/mqtt",
+      { username:user, password:pass }
+    );
+
+    client.on("connect", () => {
+      document.getElementById("statusLabel").innerText = "CONNECTED";
+      client.subscribe(topicStatus);
+    });
+
+    client.on("message", (topic, msg) => {
+      try {
+        const d = JSON.parse(msg.toString());
+        // Update Values
+        document.getElementById("liveV").innerText = d.v + "V";
+        document.getElementById("liveA").innerText = d.a + "A";
+        
+        // Update Tanks
+        document.getElementById("upBar").style.width = d.up + "%";
+        document.getElementById("upPct").innerText = d.up + "%";
+        document.getElementById("loBar").style.width = d.lo + "%";
+        document.getElementById("loPct").innerText = d.lo + "%";
+
+        // Update Status Label (Assuming d.m is motor status)
+        if(d.m === "ON") {
+            document.getElementById("statusLabel").innerText = "MOTOR RUNNING";
+            document.getElementById("statusLabel").style.color = "var(--green)";
         } else {
-            document.getElementById("status").innerText = "⚠️ സെറ്റിംഗ്‌സ് നൽകുക";
-            openSettings();
+            document.getElementById("statusLabel").innerText = "MOTOR STOPPED";
+            document.getElementById("statusLabel").style.color = "var(--red)";
         }
-    };
+      } catch (e) { console.log(e); }
+    });
+  }
 
-    function connectMQTT(user, pass) {
-        const options = { username: user, password: pass, clean: true, connectTimeout: 5000, reconnectPeriod: 2000 };
-        client = mqtt.connect(brokerUrl, options);
+  function sendCmd(cmd) {
+    if (client && client.connected) client.publish(topicControl, cmd);
+  }
 
-        client.on("connect", () => {
-            document.getElementById("status").innerText = "✅ കണക്ട് ആയിട്ടുണ്ട്";
-            document.getElementById("indicator").style.backgroundColor = "blue";
-            const id = document.getElementById("device").value;
-            client.subscribe(id + "/STATUS");
-        });
-
-        client.on("message", (topic, message) => {
-            const motorState = message.toString();
-            const statusText = document.getElementById("status");
-            const indicator = document.getElementById("indicator");
-
-            if (motorState === "RUNNING") {
-                statusText.innerText = "മോട്ടോർ പ്രവർത്തിക്കുന്നു";
-                indicator.style.backgroundColor = "#0a8f08";
-                if (!timerInterval) {
-                    startTime = new Date();
-                    timerInterval = setInterval(updateTimer, 1000);
-                }
-            } else if (motorState === "STOPPED") {
-                statusText.innerText = "മോട്ടോർ ഓഫ് ആണ്";
-                indicator.style.backgroundColor = "#b30000";
-                clearInterval(timerInterval);
-                timerInterval = null;
-                document.getElementById("timer").innerText = "00:00:00";
-            }
-        });
-
-        client.on("error", () => { document.getElementById("status").innerText = "❌ കണക്ഷൻ പരാജയപ്പെട്ടു"; });
+  function resetCloud() {
+    if (confirm("Are you sure you want to reset cloud data?")) {
+      if (client && client.connected) client.publish("A001/RESET", "TRUE");
     }
+  }
 
-    function updateTimer() {
-        const now = new Date();
-        const diff = new Date(now - startTime);
-        const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
-        const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
-        const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
-        document.getElementById("timer").innerText = `${h}:${m}:${s}`;
+  function openSettings() {
+    const u = prompt("MQTT Username:");
+    const p = prompt("MQTT Password:");
+    if (u && p) {
+      localStorage.setItem("mqtt_user", u);
+      localStorage.setItem("mqtt_pass", p);
+      location.reload();
     }
+  }
 
-    function motorOn() {
-        if(!client || !client.connected) return alert("കണക്ഷൻ ഇല്ല!");
-        client.publish(document.getElementById("device").value + "/MOTOR", "ON");
-    }
-
-    function motorOff() {
-        if(!client || !client.connected) return alert("കണക്ഷൻ ഇല്ല!");
-        client.publish(document.getElementById("device").value + "/MOTOR", "OFF");
-    }
-
-    function openSettings() {
-        document.getElementById("mqttUser").value = localStorage.getItem("mqtt_user") || "aneesh_home";
-        document.getElementById("mqttPass").value = localStorage.getItem("mqtt_pass") || "";
-        document.getElementById("settingsModal").style.display = "block";
-    }
-
-    function closeSettings() { document.getElementById("settingsModal").style.display = "none"; }
-
-    function saveSettings() {
-        const user = document.getElementById("mqttUser").value;
-        const pass = document.getElementById("mqttPass").value;
-        if(user && pass) {
-            localStorage.setItem("mqtt_user", user);
-            localStorage.setItem("mqtt_pass", pass);
-            location.reload();
-        } else { alert("വിവരങ്ങൾ പൂർണ്ണമായി നൽകുക"); }
-    }
-  </script>
+  connectMQTT();
+</script>
 </body>
 </html>
